@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>반응 속도 게임</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: url('/static/images/background.jpg') no-repeat center center fixed;
+            background-size: cover;
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            text-align: center;
+            font-size: 24px;
+            color: white;
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+            background: transparent;
+        }
+    </style>
+</head>
+<body>
+    <div id="score">점수: 0</div>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const context = canvas.getContext('2d');
+        let score = 0;
+        let timeLeft = 40;
+        let objects = [];
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        function random(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+
+        function createObject() {
+            const radius = 20;
+            const x = random(radius, canvas.width - radius);
+            const y = random(radius, canvas.height - radius);
+            const dx = random(-2, 2);
+            const dy = random(-2, 2);
+            const color = 'red'; // 원의 색상
+
+            return { x, y, dx, dy, radius, color };
+        }
+
+        function drawObject(obj) {
+            context.beginPath();
+            context.arc(obj.x, obj.y, obj.radius, 0, Math.PI * 2, false);
+            context.fillStyle = obj.color;
+            context.fill();
+            context.closePath();
+        }
+
+        function updateObjects() {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+
+            objects.forEach(obj => {
+                obj.x += obj.dx;
+                obj.y += obj.dy;
+
+                if (obj.x + obj.radius > canvas.width || obj.x - obj.radius < 0) {
+                    obj.dx = -obj.dx;
+                }
+
+                if (obj.y + obj.radius > canvas.height || obj.y - obj.radius < 0) {
+                    obj.dy = -obj.dy;
+                }
+
+                drawObject(obj);
+            });
+        }
+
+        function gameLoop() {
+            updateObjects();
+            requestAnimationFrame(gameLoop);
+        }
+
+        canvas.addEventListener('click', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+
+            objects.forEach((obj, index) => {
+                const dist = Math.hypot(mouseX - obj.x, mouseY - obj.y);
+                if (dist < obj.radius) {
+                    objects.splice(index, 1); // 객체 제거
+                    score += 2; // 점수 추가
+                    document.getElementById('score').innerText = `점수: ${score}`;
+                }
+            });
+        });
+
+        setInterval(() => {
+            objects.push(createObject());
+        }, 2000);
+
+        gameLoop();
+    </script>
+</body>
+</html>
