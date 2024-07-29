@@ -10,13 +10,20 @@
             background: url('/static/images/background.jpg') no-repeat center center fixed;
             background-size: cover;
         }
-        #score {
+        #scoreboard {
             position: absolute;
             top: 10px;
             width: 100%;
             text-align: center;
             font-size: 24px;
             color: white;
+        }
+        #score {
+            display: inline-block;
+            margin-right: 20px;
+        }
+        #time {
+            display: inline-block;
         }
         canvas {
             display: block;
@@ -26,14 +33,24 @@
     </style>
 </head>
 <body>
-    <div id="score">점수: 0</div>
+    <div id="scoreboard">
+        <div id="score">점수: 0</div>
+        <div id="time">남은 시간: 15초</div>
+    </div>
     <canvas id="gameCanvas"></canvas>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const context = canvas.getContext('2d');
         let score = 0;
-        let timeLeft = 40;
+        let timeLeft = 15;  // 초기 시간 15초
         let objects = [];
+        let part = 1;
+        let speedMultiplier = 1;
+        let triangleProbability = 0.2;  // 삼각형 출현 확률 고정
+        let squareProbability = 0.2;  // 사각형 출현 확률 고정
+        let lastScore = 0;
+        let radius = 40; // 초기 반지름
+        let reduceSize = false;
 
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
@@ -43,19 +60,38 @@
         }
 
         function createObject() {
-            const radius = 20;
+            const shapeType = Math.random();
+            let shape;
+            if (shapeType < squareProbability) {
+                shape = 'square';
+            } else if (shapeType < triangleProbability + squareProbability) {
+                shape = 'triangle';
+            } else {
+                shape = 'circle';
+            }
+
             const x = random(radius, canvas.width - radius);
             const y = random(radius, canvas.height - radius);
-            const dx = random(-2, 2);
-            const dy = random(-2, 2);
-            const color = 'red'; // 원의 색상
+            const dx = random(-2, 2) * speedMultiplier;
+            const dy = random(-2, 2) * speedMultiplier;
+            const color = shape === 'circle' ? 'red' : shape === 'triangle' ? 'blue' : 'green';
+            const points = shape === 'circle' ? 1 : shape === 'triangle' ? 3 : 4;
 
-            return { x, y, dx, dy, radius, color };
+            return { x, y, dx, dy, radius, color, shape, points };
         }
 
         function drawObject(obj) {
             context.beginPath();
-            context.arc(obj.x, obj.y, obj.radius, 0, Math.PI * 2, false);
+            if (obj.shape === 'circle') {
+                context.arc(obj.x, obj.y, obj.radius, 0, Math.PI * 2, false);
+            } else if (obj.shape === 'triangle') {
+                context.moveTo(obj.x, obj.y - obj.radius);
+                context.lineTo(obj.x - obj.radius, obj.y + obj.radius);
+                context.lineTo(obj.x + obj.radius, obj.y + obj.radius);
+                context.closePath();
+            } else {
+                context.rect(obj.x - obj.radius, obj.y - obj.radius, obj.radius * 2, obj.radius * 2);
+            }
             context.fillStyle = obj.color;
             context.fill();
             context.closePath();
@@ -92,17 +128,75 @@
 
             objects.forEach((obj, index) => {
                 const dist = Math.hypot(mouseX - obj.x, mouseY - obj.y);
-                if (dist < obj.radius) {
+                if ((obj.shape === 'circle' && dist < obj.radius) ||
+                    (obj.shape === 'triangle' && isInsideTriangle(obj, mouseX, mouseY)) ||
+                    (obj.shape === 'square' && isInsideSquare(obj, mouseX, mouseY))) {
                     objects.splice(index, 1); // 객체 제거
-                    score += 2; // 점수 추가
+                    score += obj.points; // 점수 추가
                     document.getElementById('score').innerText = `점수: ${score}`;
                 }
             });
         });
 
-        setInterval(() => {
+        function isInsideTriangle(obj, mouseX, mouseY) {
+            const b1 = sign(mouseX, mouseY, obj.x, obj.y - obj.radius, obj.x - obj.radius, obj.y + obj.radius) < 0.0;
+            const b2 = sign(mouseX, mouseY, obj.x - obj.radius, obj.y + obj.radius, obj.x + obj.radius, obj.y + obj.radius) < 0.0;
+            const b3 = sign(mouseX, mouseY, obj.x + obj.radius, obj.y + obj.radius, obj.x, obj.y - obj.radius) < 0.0;
+            return ((b1 === b2) && (b2 === b3));
+        }
+
+        function isInsideSquare(obj, mouseX, mouseY) {
+            return mouseX >= obj.x - obj.radius && mouseX <= obj.x + obj.radius &&
+                   mouseY >= obj.y - obj.radius && mouseY <= obj.y + obj.radius;
+        }
+
+        function sign(x1, y1, x2, y2, x3, y3) {
+            return (x1 - x3) * (y2 - y3) - (x2 - x3) * (y1 - y3);
+        }
+
+        function updateGameState() {
+            if (timeLeft > 0) {
+                timeLeft -= 1;
+                document.getElementById('time').innerText = `남은 시간: ${timeLeft}초`;
+            } else {
+                clearInterval(gameInterval);
+                clearInterval(stateInterval);
+                window.location.href = `/end?score=${score}`;
+            }
+
+            if (timeLeft % 15 === 0 && timeLeft !== 15) {  // 파트별 시간 15초
+                if (part % 2 === 1) {
+                    // 홀수 파트: 삼각형과 사각형 출현
+                    if (part > 1) {
+                        squareProbability = 0.2;
+                    }
+                    // 세 번째 홀수 파트부터 도형 크기 감소
+                    if (part >= 3) {
+                        reduceSize = true;
+                    }
+                } else {
+                    // 짝수 파트: 속도 증가
+                    speedMultiplier *= 1.25;
+                }
+                // 전 파트에서 얻은 점수를 시간에 합산
+                timeLeft += score - lastScore;
+                lastScore = score;
+                part += 1;
+            }
+
+            if (reduceSize && radius > 16) {
+                radius *= 0.95; // 도형 크기 5% 감소
+                if (radius < 16) {
+                    radius = 16; // 최소 크기 유지
+                }
+            }
+        }
+
+        const gameInterval = setInterval(() => {
             objects.push(createObject());
-        }, 2000);
+        }, 1000);  // 도형 출현 간격 1초
+
+        const stateInterval = setInterval(updateGameState, 1000);
 
         gameLoop();
     </script>

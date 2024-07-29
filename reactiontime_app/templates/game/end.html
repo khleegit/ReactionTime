@@ -1,17 +1,38 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>반응 속도 게임</title>
+    <title>게임 종료</title>
     <style>
-        body { text-align: center; background-color: black; color: white; }
-        .end-message { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; }
+        body {
+            text-align: center;
+            background-color: black;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+        }
+        .score {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .button {
+            font-size: 20px;
+            padding: 10px 20px;
+            margin: 10px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
-    <div class="end-message">
-        <p>게임 끝!</p>
-        <p>최종 점수: {{ score }}</p>
-        <button onclick="location.href='{% url 'start_game' %}'">다시 시작</button>
+    <div class="container">
+        <div class="score">최종 점수: {{ score }}</div>
+        <button class="button" onclick="location.href='{% url 'start_game' %}'">다시 시작</button>
+        <button class="button" onclick="window.close()">종료</button>
     </div>
 </body>
 </html>
