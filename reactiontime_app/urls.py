@@ -1,8 +1,9 @@
 from django.urls import path
-from . import views
+from reactiontime_app import views
 
 urlpatterns = [
-    path('', views.start_game, name='start_game'),
-    path('play/', views.play_game, name='play_game'),
-    path('end/', views.end_game, name='end_game'),
+    path('', views.start, name='start'),
+    path('start/', views.start, name='start'),
+    path('play/', views.play, name='play'),
+    path('end/', views.end, name='end'),
 ]
