@@ -18,6 +18,10 @@
             font-size: 24px;
             color: white;
         }
+        #stage {
+            display: inline-block;
+            margin-right: 20px;
+        }
         #score {
             display: inline-block;
             margin-right: 20px;
@@ -30,10 +34,14 @@
             margin: 0 auto;
             background: transparent;
         }
+        .time-animate {
+            transition: all 1s ease-out;
+        }
     </style>
 </head>
 <body>
     <div id="scoreboard">
+        <div id="stage">단계: 1</div>
         <div id="score">점수: 0</div>
         <div id="time">남은 시간: 15초</div>
     </div>
@@ -42,15 +50,16 @@
         const canvas = document.getElementById('gameCanvas');
         const context = canvas.getContext('2d');
         let score = 0;
+        let stage = 1;
         let timeLeft = 15;  // 초기 시간 15초
         let objects = [];
-        let part = 1;
         let speedMultiplier = 1;
         let triangleProbability = 0;
         let squareProbability = 0;
         let lastScore = 0;
         let radius = 40; // 초기 반지름
         let reduceSize = false;
+        const timeElement = document.getElementById('time');
 
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
@@ -72,8 +81,9 @@
 
             const x = random(radius, canvas.width - radius);
             const y = random(radius, canvas.height - radius);
-            const dx = random(-2, 2) * speedMultiplier;
-            const dy = random(-2, 2) * speedMultiplier;
+            const speed = shape === 'triangle' ? speedMultiplier * 1.5 : shape === 'square' ? speedMultiplier * 2 : speedMultiplier;
+            const dx = random(-2, 2) * speed;
+            const dy = random(-2, 2) * speed;
             const color = shape === 'circle' ? 'red' : shape === 'triangle' ? 'blue' : 'green';
             const points = shape === 'circle' ? 1 : shape === 'triangle' ? 2 : 3;
 
@@ -140,7 +150,7 @@
             requestAnimationFrame(gameLoop);
         }
 
-        canvas.addEventListener('click', (event) => {
+        canvas.addEventListener('mouseup', (event) => {
             const rect = canvas.getBoundingClientRect();
             const mouseX = event.clientX - rect.left;
             const mouseY = event.clientY - rect.top;
@@ -184,34 +194,52 @@
             }
 
             if (timeLeft % 15 === 0 && timeLeft !== 15) {  // 파트별 시간 15초
-                if (part % 2 === 1) {
-                    // 홀수 파트: 삼각형과 사각형 출현
-                    if (part >= 1) {
-                        triangleProbability = 0.2; // 15초 후부터 삼각형 출현
-                    }
-                    if (part >= 3) {
-                        squareProbability = 0.1; // 45초 후부터 사각형 출현
-                    }
-                    // 두 번째 홀수 파트부터 도형 크기 감소
-                    if (part >= 2) {
-                        reduceSize = true;
-                    }
-                } else {
-                    // 짝수 파트: 속도 증가
-                    speedMultiplier *= 1.25;
-                }
-                // 전 파트에서 얻은 점수를 시간에 합산
-                timeLeft += score - lastScore;
-                lastScore = score;
-                part += 1;
-            }
+                // 스테이지 증가
+                stage += 1;
+                document.getElementById('stage').innerText = `단계: ${stage}`;
 
-            if (reduceSize && radius > 16) {
-                radius *= 0.95; // 도형 크기 5% 감소
-                if (radius < 16) {
-                    radius = 16; // 최소 크기 유지
+                // 스테이지 변경 시 속도와 도형 크기 적용
+                if (stage % 2 === 1) {
+                    speedMultiplier *= 1.5; // 속도 증가 (150%)
+                    objects.forEach(obj => {
+                        obj.dx *= 1.5;
+                        obj.dy *= 1.5;
+                    });
+                } else {
+                    if (stage >= 3) {
+                        triangleProbability = 0.2; // 3단계부터 삼각형 출현
+                    }
+                    if (stage >= 5) {
+                        squareProbability = 0.2; // 5단계부터 사각형 출현
+                    }
+                    if (reduceSize && radius > 16) {
+                        radius *= 0.95; // 도형 크기 5% 감소
+                        if (radius < 16) {
+                            radius = 16; // 최소 크기 유지
+                        }
+                    }
                 }
+                
+                animateTimeIncrease(score - lastScore);
+                lastScore = score;
             }
+        }
+
+        function animateTimeIncrease(increase) {
+            const newTimeLeft = timeLeft + increase;
+            let currentTime = timeLeft;
+
+            const interval = setInterval(() => {
+                if (currentTime < newTimeLeft) {
+                    currentTime++;
+                    timeElement.classList.add('time-animate');
+                    timeElement.innerText = `남은 시간: ${currentTime}초`;
+                } else {
+                    clearInterval(interval);
+                    timeElement.classList.remove('time-animate');
+                    timeLeft = newTimeLeft;
+                }
+            }, 50);
         }
 
         const gameInterval = setInterval(() => {
