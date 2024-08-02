@@ -58,10 +58,17 @@
         let stage = 1;
         let timeLeft = 15;  // 초기 시간 15초
         let objects = [];
-        let speedMultiplier = 2;
-        let circleSpeed = 1;
-        let triangleSpeed = circleSpeed * 1.25;
-        let squareSpeed = circleSpeed * 1.5;
+        
+        let fixedSpeed = 2; // 1단계에서의 고정된 이동 속도
+        const upfixedSpeed = 1.25;
+        const uptriangleSpeed = 1.5;
+        const upsquareSpeed = 2.0;
+
+        // 도형 속도 설정
+        let circleSpeed = fixedSpeed;
+        let triangleSpeed = fixedSpeed * uptriangleSpeed;
+        let squareSpeed = fixedSpeed * upsquareSpeed;
+
         let triangleProbability = 0;
         let squareProbability = 0;
         let lastScore = 0;
@@ -210,18 +217,27 @@
                 document.getElementById('stage').innerText = `단계: ${stage}`;
 
                 // 스테이지 변경 시 속도와 도형 크기 적용
-                if (stage % 2 === 1) {
-                    speedMultiplier *= 1.1; // 속도 증가 (110%)
-                    circleSpeed *= speedMultiplier;
-                    triangleSpeed = circleSpeed * 1.5;
-                    squareSpeed = circleSpeed * 2;
+                if (stage % 2 === 0) { // 짝수 단계에서 속도 증가
+                    fixedSpeed *= upfixedSpeed;
+                    circleSpeed = fixedSpeed;
+                    triangleSpeed = fixedSpeed * uptriangleSpeed;
+                    squareSpeed = fixedSpeed * upsquareSpeed;
+
                     objects.forEach(obj => {
-                        obj.dx *= speedMultiplier;
-                        obj.dy *= speedMultiplier;
+                        if (obj.shape === 'circle') {
+                            obj.dx = Math.sign(obj.dx) * circleSpeed;
+                            obj.dy = Math.sign(obj.dy) * circleSpeed;
+                        } else if (obj.shape === 'triangle') {
+                            obj.dx = Math.sign(obj.dx) * triangleSpeed;
+                            obj.dy = Math.sign(obj.dy) * triangleSpeed;
+                        } else if (obj.shape === 'square') {
+                            obj.dx = Math.sign(obj.dx) * squareSpeed;
+                            obj.dy = Math.sign(obj.dy) * squareSpeed;
+                        }
                     });
                 } else {
                     if (stage >= 3) {
-                        triangleProbability = 0.4; // 3단계부터 삼각형 출현
+                        triangleProbability = 0.2; // 3단계부터 삼각형 출현
                     }
                     if (stage >= 5) {
                         squareProbability = 0.2; // 5단계부터 사각형 출현
@@ -233,7 +249,7 @@
                         }
                     }
                 }
-                
+
                 animateTimeIncrease(currentStageScore);
                 timeLeft += currentStageScore; // 현 단계 점수를 시간에 추가
                 currentStageScore = 0; // 현 단계 점수 초기화
